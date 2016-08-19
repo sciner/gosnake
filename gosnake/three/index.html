@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ru-RU">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Cache-Control" content="no-cache"/>
+    <title>Змейка</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+    	html, body {
+			padding: 0;
+			margin: 0;
+			overflow: hidden;
+    	}
+    </style>
+    <script src="/js/jquery-2.1.4.min.js"></script>
+    <script src="stats.min.js"></script>
+    <script src="three.min.js"></script>
+</head>
+<body oncontextmenu="return false;">
+
+    <div id="container"></div>
+
+	<script type="x-shader/x-vertex" id="vertexshader">
+		attribute float size;
+		attribute vec3 customColor;
+		varying vec3 vColor;
+		void main() {
+			vColor = customColor;
+			vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+			gl_PointSize = size * ( 300.0 / -mvPosition.z );
+			gl_Position = projectionMatrix * mvPosition;
+		}
+	</script>
+
+	<script type="x-shader/x-fragment" id="fragmentshader">
+		uniform vec3 color;
+		uniform sampler2D texture;
+		varying vec3 vColor;
+		void main() {
+			gl_FragColor = vec4( color * vColor, 1.0 );
+			gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+		}
+	</script>
+
+	<script>
+
+		// if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+		var renderer, scene, camera, stats;
+
+		var particleSystem, uniforms, geometry;
+		var particles = 10000;
+
+		// snow
+		var geometry_snow, parameters, color, sprite, size, materials = [];
+		var particles_snow;
+		var particles_snow_list = [];
+
+		// floor
+		var floorTexture;
+
+		var WIDTH = window.innerWidth;
+		var HEIGHT = window.innerHeight;
+		var windowHalfX = WIDTH / 2;
+		var windowHalfY = HEIGHT / 2;
+
+		init();
+		initFloor();
+		initLights();
+		initSnow();
+		animate();
+
+		function init() {
+			camera = new THREE.PerspectiveCamera( 40, WIDTH / HEIGHT, 1, 10000 );
+			camera.position.z = 450;
+			// camera = new THREE.OrthographicCamera( WIDTH / - 2, WIDTH / 2, HEIGHT / 2, HEIGHT / - 2, 500, 1000 );
+			// camera.position.z = 100;
+			scene = new THREE.Scene();
+			renderer = new THREE.WebGLRenderer();
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.setSize( WIDTH, HEIGHT );
+			var container = document.getElementById( 'container' );
+			container.appendChild( renderer.domElement );
+			stats = new Stats();
+			container.appendChild( stats.dom );
+			window.addEventListener( 'resize', onWindowResize, false );
+		}
+
+		function initLights() {
+			uniforms = {
+				color:     { value: new THREE.Color( 0xffffff ) },
+				texture:   { value: new THREE.TextureLoader().load( "textures/sprites/spark1.png" ) }
+			};
+			var shaderMaterial = new THREE.ShaderMaterial( {
+				uniforms:       uniforms,
+				vertexShader:   document.getElementById( 'vertexshader' ).textContent,
+				fragmentShader: document.getElementById( 'fragmentshader' ).textContent,
+				blending:       THREE.AdditiveBlending,
+				depthTest:      false,
+				transparent:    true
+			});
+			var radius = 200;
+			geometry = new THREE.BufferGeometry();
+			var positions = new Float32Array( particles * 3 );
+			var colors = new Float32Array( particles * 3 );
+			var sizes = new Float32Array( particles );
+			var color = new THREE.Color();
+			for ( var i = 0, i3 = 0; i < particles; i ++, i3 += 3 ) {
+				positions[ i3 + 0 ] = ( Math.random() * 2 - 1 ) * radius;
+				positions[ i3 + 1 ] = ( Math.random() * 2 - 1 ) * radius;
+				positions[ i3 + 2 ] = ( Math.random() * 2 - 1 ) * radius;
+				color.setHSL( i / particles, 1.0, 0.5 );
+				colors[ i3 + 0 ] = color.r;
+				colors[ i3 + 1 ] = color.g;
+				colors[ i3 + 2 ] = color.b;
+				sizes[ i ] = 20;
+			}
+			geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
+			geometry.addAttribute( 'customColor', new THREE.BufferAttribute( colors, 3 ) );
+			geometry.addAttribute( 'size', new THREE.BufferAttribute( sizes, 1 ) );
+			particleSystem = new THREE.Points( geometry, shaderMaterial );
+			scene.add( particleSystem );
+		}
+
+		function initSnow() {
+			geometry_snow = new THREE.Geometry();
+			var textureLoader = new THREE.TextureLoader();
+			sprite1 = textureLoader.load( "textures/sprites/snowflake1.png" );
+			sprite2 = textureLoader.load( "textures/sprites/snowflake2.png" );
+			sprite3 = textureLoader.load( "textures/sprites/snowflake3.png" );
+			sprite4 = textureLoader.load( "textures/sprites/snowflake4.png" );
+			sprite5 = textureLoader.load( "textures/sprites/snowflake5.png" );
+			for ( i = 0; i < 10000; i ++ ) {
+				var vertex = new THREE.Vector3();
+				vertex.x = Math.random() * 2000 - 1000;
+				vertex.y = Math.random() * 2000 - 1000;
+				vertex.z = Math.random() * 2000 - 1000;
+				geometry_snow.vertices.push( vertex );
+			}
+			parameters = [
+				[ [1.0, 0.2, 0.5], sprite2, 20 ],
+				[ [0.95, 0.1, 0.5], sprite3, 15 ],
+				[ [0.90, 0.05, 0.5], sprite1, 10 ],
+				[ [0.85, 0, 0.5], sprite5, 8 ],
+				[ [0.80, 0, 0.5], sprite4, 5 ]
+			];
+			for ( i = 0; i < parameters.length; i ++ ) {
+				color  = parameters[i][0];
+				sprite = parameters[i][1];
+				size   = parameters[i][2];
+				materials[i] = new THREE.PointsMaterial( { size: size, map: sprite, blending: THREE.AdditiveBlending, depthTest: false, transparent : true } );
+				materials[i].color.setHSL( color[0], color[1], color[2] );
+				particles_snow = new THREE.Points( geometry_snow, materials[i] );
+				particles_snow.rotation.x = Math.random() * 6;
+				particles_snow.rotation.y = Math.random() * 6;
+				particles_snow.rotation.z = Math.random() * 6;
+				particles_snow_list.push(particles_snow);
+				scene.add(particles_snow);
+			}
+		}
+
+		function initFloor() {
+			// FLOOR
+			// floorTexture = new THREE.ImageUtils.loadTexture( 'textures/sprites/checkerboard.jpg' );
+			floorTexture = new THREE.ImageUtils.loadTexture( 'textures/sprites/background.png' );
+			floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
+			floorTexture.repeat.set( 3, 3 );
+			var floorMaterial = new THREE.MeshBasicMaterial( { map: floorTexture, side: THREE.DoubleSide } );
+			var floorGeometry = new THREE.PlaneGeometry(900/1.3, 2400/1.3, 12, 12);
+			var floor = new THREE.Mesh(floorGeometry, floorMaterial);
+			// floor.position.y = 5;
+			// floor.rotation.x = Math.PI / 2;
+			scene.add(floor);
+		}
+
+		function onWindowResize() {
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+
+		function animate() {
+			requestAnimationFrame( animate );
+			render();
+			stats.update();
+		}
+
+		function render() {
+			var time = Date.now() * 0.005;
+			particleSystem.rotation.z = 0.01 * time;
+			var sizes = geometry.attributes.size.array;
+			// points
+			for ( var i = 0; i < particles; i++ ) {
+				sizes[ i ] = 10 * ( 1 + Math.sin( 0.1 * i + time ) );
+			}
+			// snow
+			for ( var i = 0; i < particles_snow_list.length; i++ ) {
+				particles_snow_list[i].rotation.z = 0.01 * time;
+			}
+			// floor
+			floorTexture.offset.set( -0.02 * time % 256, -0.02 * time % 256);
+
+			geometry.attributes.size.needsUpdate = true;
+			renderer.render( scene, camera );
+		}
+
+	</script>
+
+</body>
+</html>
