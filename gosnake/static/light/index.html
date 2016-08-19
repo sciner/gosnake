@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<script src="jquery-2.1.4.min.js"></script>
+<script src="pixi.js"></script>
+<script>
+
+$(document).ready(function(){
+
+var lightUrl = '/light/light.png';
+var tiledmapUrl = '/light/map.png';
+
+var fragmentShader = [
+'precision mediump float;',
+'varying vec4 vColor;',
+'varying vec2 vTextureCoord;',
+'uniform sampler2D u_texture; //diffuse map',
+'uniform sampler2D u_lightmap;   //light map',
+'uniform vec2 resolution; //resolution of screen',
+'uniform vec4 ambientColor; //ambient RGB, alpha channel is intensity ',
+'void main() {',
+'    vec4 diffuseColor = texture2D(u_texture, vTextureCoord);',
+'    vec2 lighCoord = (gl_FragCoord.xy / resolution.xy);',
+'    vec4 light = texture2D(u_lightmap, vTextureCoord);',
+'    vec3 ambient = ambientColor.rgb * ambientColor.a;',
+'    vec3 intensity = ambient + light.rgb;',
+'    vec3 finalColor = diffuseColor.rgb * intensity;',
+'    gl_FragColor = vColor * vec4(finalColor, diffuseColor.a);',
+'}'
+].join('\n');
+
+function LightmapFilter(lightmapTex, ambientColor=[0.3, 0.3, 0.7, 0.5], resolution=[1.0, 1.0]) {
+  this.lightmapTex = lightmapTex;
+  
+  PIXI.AbstractFilter.call(
+    this,
+    null,
+    fragmentShader,
+    {
+      u_lightmap: { 
+        type: 'sampler2D', 
+        value: lightmapTex 
+      },
+      resolution: {
+        type: '2f', 
+        value: new Float32Array(resolution)
+      },
+      ambientColor: {
+        type: '4f', 
+        value: new Float32Array(ambientColor)
+      }
+    });
+}
+
+LightmapFilter.prototype = Object.create(PIXI.AbstractFilter.prototype);
+LightmapFilter.prototype.constructor = LightmapFilter;
+
+
+// need to preload fucking image since RenderTexture does not support async loading
+var img = new Image();
+img.crossOrigin = "Anonymous";
+img.src = lightUrl;
+
+img.onload = function () {
+
+  var stage = new PIXI.Container();
+
+  // create a renderer instance.
+  var renderer = PIXI.autoDetectRenderer(400, 300);
+
+  // draw lightmap on this render target
+  var renderTexture = new PIXI.RenderTexture(renderer, 400, 300);
+
+  // tex creation
+  var lightBaseTexture = new PIXI.BaseTexture(img);
+  var lightTexture = new PIXI.Texture(lightBaseTexture);
+  var lightTexture2 = new PIXI.Texture(lightBaseTexture);
+  
+  var lightSprite = new PIXI.Sprite(lightTexture);
+  var lightSprite2 = new PIXI.Sprite(lightTexture2);
+  
+  // ADDITIVE blend mode for pretty intersecting lights
+  lightSprite.blendMode = PIXI.BLEND_MODES.ADD;
+  lightSprite2.blendMode = PIXI.BLEND_MODES.ADD;
+  
+  // move a little bit one light on right to check proper lights intersect
+  lightSprite.x = 100;
+
+  // back background of the lightmap
+  var lightmapBg = new PIXI.Graphics();
+  lightmapBg.beginFill(0x000000);
+  lightmapBg.drawRect(0, 0, 400, 300); // size of our renderer
+  lightmapBg.endFill();
+
+  // create the lightmap
+  var lightmapContainer = new PIXI.Container();
+  //lightmapContainer.addChild(lightmapBg);
+  //lightmapContainer.addChild(lightSprite);
+  lightmapContainer.addChild(lightSprite2);
+  renderTexture.render(lightmapContainer);
+
+  // here is our map, a simple texture for the example
+  var tiledmapSprite = new PIXI.Sprite.fromImage(tiledmapUrl);
+  
+  // tada magic - apply our lightmap to our tiledmap
+  tiledmapSprite.filters = [new LightmapFilter(renderTexture)];
+
+  // add the tiledmap to stage
+  stage.addChild(tiledmapSprite);
+
+  document.body.appendChild(renderer.view);
+
+  // rendering code
+  requestAnimationFrame( animate );
+
+  function animate() {
+
+    requestAnimationFrame( animate );
+
+    // render the stage   
+    renderer.render(stage);
+  }  
+};
+
+});
+</script>
+
+</head>
+
+<body>
+
+
+</body>
+</html>
+
