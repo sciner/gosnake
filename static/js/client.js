@@ -42,6 +42,7 @@ var client = {
                     }
                     let protocol = window.location.protocol == 'https:' ? 'wss:' : 'ws:';
                     let ws_url = protocol + '//' + server_url + '/ws';
+                    console.log('ws_url', ws_url);
                     var socket = new WebSocket(ws_url
                         + '?Login=' + connection_properties.Login
                         + '&ServerName=' + connection_properties.ServerName
