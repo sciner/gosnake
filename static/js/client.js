@@ -36,7 +36,11 @@ var client = {
         try {
             if(this.socket == null) {
                 if (window["WebSocket"]) {
-                    var socket = new WebSocket("ws://" + game_server + "/ws"
+                    let server_url = location.hostname;
+                    if(location.port) {
+                        server_url += ':' + location.port;
+                    }
+                    var socket = new WebSocket("ws://" + server_url + "/ws"
                         + '?Login=' + connection_properties.Login
                         + '&ServerName=' + connection_properties.ServerName
                         + '&StartSnakeSize=' + connection_properties.StartSnakeSize
