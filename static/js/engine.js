@@ -1,14 +1,12 @@
 /**
 * Game engine v 0.0.1
-* @2016
+* @2016-2021
 */
-
-if (navigator.userAgent.toLowerCase().indexOf('chrome') > -1)
-{
+if (navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
 	var VERSION = '0.0.1';
 	var type = 'websocket';
     var args = [
-        '\n %c %c %c SnakeTheGame ' + VERSION + ' - ✰ ' + type + ' ✰  %c ' + ' %c ' + ' http://snake.smi-media.ru/  %c %c ♥%c♥%c♥ \n\n',
+        '\n %c %c %c GOsnake ' + VERSION + ' - ✰ ' + type + ' ✰  %c ' + ' %c ' + ' GO + JS %c %c ♥%c♥%c♥ \n\n',
         'background: #ff66a5; padding:5px 0;',
         'background: #ff66a5; padding:5px 0;',
         'color: #ff66a5; background: #030307; padding:5px 0;',
@@ -19,7 +17,6 @@ if (navigator.userAgent.toLowerCase().indexOf('chrome') > -1)
         'color: #ff2424; background: #fff; padding:5px 0;',
         'color: #ff2424; background: #fff; padding:5px 0;'
     ];
-
     window.console.log.apply(console, args); //jshint ignore:line
 }
 

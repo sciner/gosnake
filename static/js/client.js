@@ -40,7 +40,9 @@ var client = {
                     if(location.port) {
                         server_url += ':' + location.port;
                     }
-                    var socket = new WebSocket("ws://" + server_url + "/ws"
+                    let protocol = window.location.protocol == 'https:' ? 'wss:' : 'ws:';
+                    let ws_url = protocol + '//' + server_url + '/ws';
+                    var socket = new WebSocket(ws_url
                         + '?Login=' + connection_properties.Login
                         + '&ServerName=' + connection_properties.ServerName
                         + '&StartSnakeSize=' + connection_properties.StartSnakeSize
